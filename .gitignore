@@ -46,10 +46,21 @@ logs/
 Thumbs.db
 .DS_Store
 
-# Project specific
+# Project specific - but keep dataset files
 experiment_results.json
 experiment_report.txt
-*.jsonl
+
+# Exclude output JSONL files (but keep dataset files)
+/*.jsonl
+zeroshot.baseline.jsonl
+fewshot.baseline.jsonl
+cot.jsonl
+self_verification.jsonl
+combined.jsonl
+
+# Keep dataset files
+!data/GSM8K/test.jsonl
+!data/GSM8K/train.jsonl
 
 # Reference implementations
 self-verification-ref/
