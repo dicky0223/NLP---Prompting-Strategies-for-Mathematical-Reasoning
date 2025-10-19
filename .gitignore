@@ -50,3 +50,6 @@ Thumbs.db
 experiment_results.json
 experiment_report.txt
 *.jsonl
+
+# Reference implementations
+self-verification-ref/

@@ -1,0 +1,86 @@
+ Recent studies reveal that large language models (LLMs), such as Llama (Dubey et al., 2024) and GPT-4 (OpenAI, 2023), excel in step-by-step
+ reasoning for addressing complex tasks driven by natural language instructions. In this assignment, you will explore the capabilities of LLM in
+ two reasoning domains: mathematics and coding. You can choose one task—either mathematics or coding—based on your interests. Submit:
+ You should submit your assignment to the COMP7607 Moodle page. You will need to submit a PDF file UniversityNumber.pdf of your report (with
+ detailed experimental details) and a zip file UniversityNumber.zip, which includes:
+ .py files.
+ zeroshot.baseline.jsonl
+ fewshot.baseline.jsonl (for math task)
+ [method_name_1].jsonl
+ [method_name_2].jsonl
+ [method_combine].jsonl or [method_improve].jsonl
+ Please note that the UniversityNumber is the number printed on your student card
+ 1 Introduction
+ Prompt Engineering refers to methods for how to instruct LLMs for desired outcomes without updating model weights. The core task of
+ assignment 1 is to design methods for prompting LLMs to improve the accuracy of LLMs on math problem-solving or code generation.
+ Generally, we have two prompting paradigms:
+ 1. Zero-shot prompting is to simply feed the task text to the model and ask for results. For example, we can send the following message to:
+ messages = [
+    {
+        "role": "system", 
+        "content": "[System Message]"
+    },
+    {
+        "role": "user", 
+        "content": "Elsa has 5 apples. Anna has 2 more apples than Elsa. How many apples do they have together?"
+    }
+ ]
+ {"role": "system", "content": "[System Message]}"}  can be optional. [System Message] is a feature-specific contextual description given to a
+ generative AI model, such as
+ Your task is to solve a series of math word problems by providing the final answer. Use the format #### [value] to highlight your answer. 
+2. Few-shot prompting presents a set of high-quality demonstrations, each consisting of both input and desired output, on the target task. As
+ the model first sees good examples, it can better understand human intention and criteria for what kinds of answers are wanted. For
+ example, we can send the following 1-shot prompting message to LLM:
+messages = [
+    {
+        "role":"system", 
+        "content": [System Message]
+    },
+    {
+        "role":"user", 
+        "content":"Elsa has 5 apples. Anna has 2 more apples than Elsa. How many apples do they have together?"
+    },
+    { 
+        "role": "assistant", 
+        "content": "Anna has 2 more apples than Elsa. So Anna has 2 + 5 = 7 apples. Elsa and Anna have 5 + 7 = 12 apples together. #### 
+    },
+    {
+        "role": "user", 
+        "content": "If there are 3 cars in the parking lot and 2 more cars arrive, how many cars are in the parking lot?"
+    },
+ ]
+ The choice of prompting format, interaction method, and decoding parameters will all significantly influence task performance
+ 
+
+ For your selected task (math reasoning), begin by implementing the two simplest baselines: zero-shot and few-shot prompting, using only the
+ problem statement with demonstrations (optional). Please refer to the example format in Section 1. Then, choose two advanced methods to
+ enhance performance
+ 
+ Data We use the grade school math dataset, GSM8K, which is one of the most popular datasets for evaluating the mathematical reasoning
+ performance of LLMs. Note that the performance of the LLM is measured using "GSM8K/test.jsonl". You can utilize "GSM8K/train.jsonl" for other
+ objectives, such as retrieving the most similar examples for the questions in the test file.
+ Metric For each method, report the overall accuracy on the 1,319 questions in the test file. Use the answer extraction function provided in
+ "GSM8K/evaluation.py" for calculating accuracy. Additionally, report the inference cost using two metrics: wall-clock time and the average
+ number of generated tokens per math question.
+ Task 1: Implement Baseline We consider two baselines:
+ Zero-shot prompt the model using only the problem statement.
+ Few-shot prompts the model with a few demonstrations, each containing manually written (or model-generated) high-quality reasoning
+ chains.
+ We provide the prompting template in "GSM8K/baseline.py".
+ Task 2: Implement two Advanced Prompting Methods You may explore various advanced strategies for improvement, such as retrieving
+ similar demonstrations, decomposing responses, employing response ensemble, engaging in self-improvement, and more. Below, we present
+several advanced methods, although not exhaustive, that you may choose to implement, considering the characteristics of mathematical
+ reasoning tasks. You are also encouraged to propose your own designs!
+ Self-Polish: Enhance Reasoning in Large Language Models via Problem Refinement paper
+ Tree Prompting: Efficient Task Adaptation without Fine-Tuning paper
+ SELF-REFINE: Iterative Refinement with Self-Feedback paper
+ PHP: Progressive-Hint Prompting Improves Reasoning in Large Language Models paper
+ CRITIC: Large Language Models Can Self-Correct with Tool-Interactive Critiquing paper
+ Teaching Algorithmic Reasoning via In-context Learning paper
+ Contrastive Decoding Improves Reasoning in Large Language Models paper
+ Self-Evaluation Guided Beam Search for Reasoning paper
+ Skills-in-Context Prompting: Unlocking Compositionality in Large Language Models paper
+ Program of Thoughts Prompting: Disentangling Computation from Reasoning for Numerical Reasoning Tasks paper
+ Large Language Models are Better Reasoners with Self-Verification paper
+ Task 3: Combine the Two Methods or Enhance One Method Can you combine the two advanced methods or enhance one method based on
+ your analysis to achieve greater gains? Are complementary or enhanced effects achievable? If not, please explain why.
