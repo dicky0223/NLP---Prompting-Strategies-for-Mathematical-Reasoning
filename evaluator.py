@@ -408,7 +408,7 @@ class Evaluator:
             # Verify each candidate
             verification_scores = []
             for candidate in candidates:
-                messages = build_verifier_messages(question, candidate['answer'])
+                messages = build_verifier_messages(question)
                 response_data = self.client.query_claude_sonnet(
                     messages=messages,
                     max_tokens=DEFAULT_CONFIG['max_tokens'],
@@ -468,7 +468,7 @@ class Evaluator:
             iterations_log.append({'iteration': 0, 'type': 'generation', 'answer': predicted_answer})
             
             # Verify solution
-            messages = build_verifier_messages(question, response)
+            messages = build_verifier_messages(question)
             verification_data = self.client.query_claude_sonnet(
                 messages=messages,
                 max_tokens=DEFAULT_CONFIG['max_tokens'],
@@ -510,7 +510,7 @@ class Evaluator:
                     predicted_answer = extract_ans_from_response(response)
                     
                     # Verify refined solution
-                    messages = build_verifier_messages(question, response)
+                    messages = build_verifier_messages(question)
                     verification_data = self.client.query_claude_sonnet(
                         messages=messages,
                         max_tokens=DEFAULT_CONFIG['max_tokens'],
