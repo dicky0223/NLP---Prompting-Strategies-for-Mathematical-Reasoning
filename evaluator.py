@@ -75,14 +75,7 @@ from task2_self_refine import (
 )
 from task2_self_verification import (
     build_cot_messages,
-    build_verifier_messages,
-    verify_answer
-)
-from task3_combined_method import (
-    generate_initial_solution as combined_generate_initial_solution,
-    verify_solution as combined_verify_solution,
-    generate_feedback as combined_generate_feedback,
-    refine_solution as combined_refine_solution
+    build_verifier_messages
 )
 
 
@@ -185,6 +178,57 @@ class Evaluator:
         return questions, answers
     
     # =========================================================================
+    # UTILITY FUNCTIONS
+    # =========================================================================
+    
+    def _verify_answer_response(self, verification_response: str) -> float:
+        """
+        Extract verification score from response text
+        Simple heuristic: check if response contains positive verification keywords
+        
+        Args:
+            verification_response: Response from verification LLM
+            
+        Returns:
+            Verification score (0.0 to 1.0)
+        """
+        lower_response = verification_response.lower()
+        
+        # Check for positive verification indicators
+        positive_keywords = ['correct', 'valid', 'yes', 'verified', 'accurate', 'true']
+        negative_keywords = ['incorrect', 'invalid', 'no', 'wrong', 'false', 'error']
+        
+        positive_count = sum(1 for kw in positive_keywords if kw in lower_response)
+        negative_count = sum(1 for kw in negative_keywords if kw in lower_response)
+        
+        if positive_count > negative_count:
+            return 1.0
+        elif negative_count > positive_count:
+            return 0.0
+        else:
+            return 0.5
+    
+    def _compare_answers(self, predicted: str, ground_truth: str) -> bool:
+        """
+        Compare two answers (handles both numeric and string answers)
+        
+        Args:
+            predicted: Predicted answer from model
+            ground_truth: Ground truth answer
+            
+        Returns:
+            True if answers match, False otherwise
+        """
+        try:
+            # Try numeric comparison
+            ground_truth_num = int(float(ground_truth))
+            predicted_num = int(float(str(predicted)))
+            return ground_truth_num == predicted_num
+        except (ValueError, TypeError):
+            # Fall back to string comparison
+            return str(predicted).strip() == str(ground_truth).strip()
+    
+    # =========================================================================
     # METHOD IMPLEMENTATIONS
     # =========================================================================
     
@@ -209,7 +253,7 @@ class Evaluator:
                 'success': True,
                 'predicted_answer': predicted_answer,
                 'ground_truth': ground_truth,
-                'is_correct': predicted_answer == ground_truth,
+                'is_correct': self._compare_answers(predicted_answer, ground_truth),
                 'response': response[:500],
                 'tokens_used': tokens_used,
                 'time_elapsed': elapsed
@@ -242,7 +286,7 @@ class Evaluator:
                 'success': True,
                 'predicted_answer': predicted_answer,
                 'ground_truth': ground_truth,
-                'is_correct': predicted_answer == ground_truth,
+                'is_correct': self._compare_answers(predicted_answer, ground_truth),
                 'response': response[:500],
                 'tokens_used': tokens_used,
                 'time_elapsed': elapsed
@@ -318,7 +362,7 @@ class Evaluator:
                 'success': True,
                 'predicted_answer': predicted_answer,
                 'ground_truth': ground_truth,
-                'is_correct': predicted_answer == ground_truth,
+                'is_correct': self._compare_answers(predicted_answer, ground_truth),
                 'is_correct_per_feedback': is_correct_per_feedback,
                 'final_solution': response[:500],
                 'tokens_used': total_tokens,
@@ -372,7 +416,7 @@ class Evaluator:
                 verification_response = response_data['content']
                 total_tokens += response_data['usage'].get('completion_tokens', 0)
                 
-                verification_score = verify_answer(verification_response)
+                verification_score = self._verify_answer_response(verification_response)
                 candidate['verification_score'] = verification_score
                 verification_scores.append(verification_score)
             
@@ -388,7 +432,7 @@ class Evaluator:
                 'success': True,
                 'predicted_answer': predicted_answer,
                 'ground_truth': ground_truth,
-                'is_correct': predicted_answer == ground_truth,
+                'is_correct': self._compare_answers(predicted_answer, ground_truth),
                 'best_verification_score': best_verification_score,
                 'num_candidates': num_candidates,
                 'candidates': candidates,
@@ -412,7 +456,7 @@ class Evaluator:
             num_cycles = 0
             
             # Generate initial solution
-            messages = combined_generate_initial_solution(question)
+            messages = build_generate_messages(question)
             response_data = self.client.query_claude_sonnet(
                 messages=messages,
                 max_tokens=DEFAULT_CONFIG['max_tokens'],
@@ -424,7 +468,7 @@ class Evaluator:
             iterations_log.append({'iteration': 0, 'type': 'generation', 'answer': predicted_answer})
             
             # Verify solution
-            messages = combined_verify_solution(question, response)
+            messages = build_verifier_messages(question, response)
             verification_data = self.client.query_claude_sonnet(
                 messages=messages,
                 max_tokens=DEFAULT_CONFIG['max_tokens'],
@@ -432,7 +476,7 @@ class Evaluator:
             verification_response = verification_data['content']
             total_tokens += verification_data['usage'].get('completion_tokens', 0)
             
-            is_correct_verification = verify_answer(verification_response)
+            is_correct_verification = self._verify_answer_response(verification_response) > 0.5
             
             iterations_log.append({
                 'iteration': 1,
@@ -444,8 +488,8 @@ class Evaluator:
             
             # Refinement if needed
             if not is_correct_verification:
-                # Get feedback
-                feedback_messages = combined_generate_feedback(question, response, verification_response)
+                # Get feedback using build_feedback_messages
+                feedback_messages = build_feedback_messages(question, response)
                 feedback_data = self.client.query_claude_sonnet(
                     messages=feedback_messages,
                     max_tokens=DEFAULT_CONFIG['max_tokens'],
@@ -455,7 +499,7 @@ class Evaluator:
                 
                 # Refinement loop
                 for iteration in range(max_refinement_iterations):
-                    refinement_messages = combined_refine_solution(question, response, feedback)
+                    refinement_messages = build_refinement_messages(question, response, feedback)
                     refinement_data = self.client.query_claude_sonnet(
                         messages=refinement_messages,
                         max_tokens=DEFAULT_CONFIG['max_tokens'],
@@ -466,7 +510,7 @@ class Evaluator:
                     predicted_answer = extract_ans_from_response(response)
                     
                     # Verify refined solution
-                    messages = combined_verify_solution(question, response)
+                    messages = build_verifier_messages(question, response)
                     verification_data = self.client.query_claude_sonnet(
                         messages=messages,
                         max_tokens=DEFAULT_CONFIG['max_tokens'],
@@ -474,7 +518,7 @@ class Evaluator:
                     verification_response = verification_data['content']
                     total_tokens += verification_data['usage'].get('completion_tokens', 0)
                     
-                    is_correct_verification = verify_answer(verification_response)
+                    is_correct_verification = self._verify_answer_response(verification_response) > 0.5
                     num_cycles += 1
                     
                     iterations_log.append({
@@ -494,7 +538,7 @@ class Evaluator:
                 'success': True,
                 'predicted_answer': predicted_answer,
                 'ground_truth': ground_truth,
-                'is_correct': predicted_answer == ground_truth,
+                'is_correct': self._compare_answers(predicted_answer, ground_truth),
                 'verification_passed_per_llm': is_correct_verification,
                 'final_solution': response[:500],
                 'tokens_used': total_tokens,
