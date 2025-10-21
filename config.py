@@ -11,7 +11,7 @@ API_KEY = "mv5qhOP2NDYOKPDs2mliZkLFzISYYELqgKw9TTy1c5I"
 
 # Default experiment configuration
 DEFAULT_CONFIG = {
-    "max_problems": 30,  # Change to 1319 for full test set evaluation
+    "max_problems": 200,  # Change to 1319 for full test set evaluation
     "temperature": 0.0,
     "max_tokens": 2048,
     "model": "Claude-Sonnet-4.5",

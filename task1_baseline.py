@@ -16,7 +16,7 @@ from config import initialize_api_client, DEFAULT_CONFIG
 from data.GSM8K.evaluation import extract_ans_from_response
 
 
-# Few-shot examples for GSM8K
+# Refactor the Few-shot examples for GSM8K
 FEW_SHOT_EXAMPLES = [
     {
         "question": "There are 15 trees in the grove. Grove workers will plant trees in the grove today. After they are done, there will be 21 trees. How many trees did the grove workers plant today?",
