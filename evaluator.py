@@ -199,8 +199,10 @@ class Evaluator:
             )
             elapsed = time.time() - start_time
             
-            response = response_data['response']
+            response = response_data['content']
             predicted_answer = extract_ans_from_response(response)
+            
+            tokens_used = response_data['usage'].get('completion_tokens', 0)
             
             return {
                 'method': 'zero-shot',
@@ -209,7 +211,7 @@ class Evaluator:
                 'ground_truth': ground_truth,
                 'is_correct': predicted_answer == ground_truth,
                 'response': response[:500],
-                'tokens_used': response_data['tokens_used'],
+                'tokens_used': tokens_used,
                 'time_elapsed': elapsed
             }
         except Exception as e:
@@ -223,7 +225,7 @@ class Evaluator:
     def evaluate_few_shot(self, question: str, ground_truth: str, num_shots: int = 5) -> Dict:
         """Evaluate few-shot method"""
         try:
-            messages = build_few_shot_messages(question, num_shots=num_shots)
+            messages = build_few_shot_messages(question, num_examples=num_shots)
             start_time = time.time()
             response_data = self.client.query_claude_sonnet(
                 messages=messages,
@@ -231,8 +233,9 @@ class Evaluator:
             )
             elapsed = time.time() - start_time
             
-            response = response_data['response']
+            response = response_data['content']
             predicted_answer = extract_ans_from_response(response)
+            tokens_used = response_data['usage'].get('completion_tokens', 0)
             
             return {
                 'method': f'few-shot-{num_shots}',
@@ -241,7 +244,7 @@ class Evaluator:
                 'ground_truth': ground_truth,
                 'is_correct': predicted_answer == ground_truth,
                 'response': response[:500],
-                'tokens_used': response_data['tokens_used'],
+                'tokens_used': tokens_used,
                 'time_elapsed': elapsed
             }
         except Exception as e:
@@ -265,8 +268,8 @@ class Evaluator:
                 messages=messages,
                 max_tokens=DEFAULT_CONFIG['max_tokens'],
             )
-            response = response_data['response']
-            total_tokens += response_data['tokens_used']
+            response = response_data['content']
+            total_tokens += response_data['usage'].get('completion_tokens', 0)
             
             predicted_answer = extract_ans_from_response(response)
             iterations_log.append({'iteration': 0, 'type': 'generation', 'answer': predicted_answer})
@@ -282,8 +285,8 @@ class Evaluator:
                     messages=feedback_messages,
                     max_tokens=DEFAULT_CONFIG['max_tokens'],
                 )
-                feedback = feedback_data['response']
-                total_tokens += feedback_data['tokens_used']
+                feedback = feedback_data['content']
+                total_tokens += feedback_data['usage'].get('completion_tokens', 0)
                 
                 is_correct_per_feedback = is_correct_solution(feedback)
                 iterations_log.append({
@@ -303,8 +306,8 @@ class Evaluator:
                     messages=refinement_messages,
                     max_tokens=DEFAULT_CONFIG['max_tokens'],
                 )
-                response = refinement_data['response']
-                total_tokens += refinement_data['tokens_used']
+                response = refinement_data['content']
+                total_tokens += refinement_data['usage'].get('completion_tokens', 0)
                 
                 predicted_answer = extract_ans_from_response(response)
             
@@ -345,8 +348,9 @@ class Evaluator:
                     messages=messages,
                     max_tokens=DEFAULT_CONFIG['max_tokens'],
                 )
-                response = response_data['response']
-                total_tokens += response_data['tokens_used']
+                response = response_data['content']
+                tokens_used = response_data['usage'].get('completion_tokens', 0)
+                total_tokens += tokens_used
                 
                 predicted_answer = extract_ans_from_response(response)
                 
@@ -354,7 +358,7 @@ class Evaluator:
                     'candidate_id': i + 1,
                     'answer': predicted_answer,
                     'temperature': [0.3, 0.5, 0.7][i] if i < 3 else 0.7,
-                    'tokens_used': response_data['tokens_used']
+                    'tokens_used': tokens_used
                 })
             
             # Verify each candidate
@@ -365,8 +369,8 @@ class Evaluator:
                     messages=messages,
                     max_tokens=DEFAULT_CONFIG['max_tokens'],
                 )
-                verification_response = response_data['response']
-                total_tokens += response_data['tokens_used']
+                verification_response = response_data['content']
+                total_tokens += response_data['usage'].get('completion_tokens', 0)
                 
                 verification_score = verify_answer(verification_response)
                 candidate['verification_score'] = verification_score
@@ -413,8 +417,8 @@ class Evaluator:
                 messages=messages,
                 max_tokens=DEFAULT_CONFIG['max_tokens'],
             )
-            response = response_data['response']
-            total_tokens += response_data['tokens_used']
+            response = response_data['content']
+            total_tokens += response_data['usage'].get('completion_tokens', 0)
             
             predicted_answer = extract_ans_from_response(response)
             iterations_log.append({'iteration': 0, 'type': 'generation', 'answer': predicted_answer})
@@ -425,8 +429,8 @@ class Evaluator:
                 messages=messages,
                 max_tokens=DEFAULT_CONFIG['max_tokens'],
             )
-            verification_response = verification_data['response']
-            total_tokens += verification_data['tokens_used']
+            verification_response = verification_data['content']
+            total_tokens += verification_data['usage'].get('completion_tokens', 0)
             
             is_correct_verification = verify_answer(verification_response)
             
@@ -446,8 +450,8 @@ class Evaluator:
                     messages=feedback_messages,
                     max_tokens=DEFAULT_CONFIG['max_tokens'],
                 )
-                feedback = feedback_data['response']
-                total_tokens += feedback_data['tokens_used']
+                feedback = feedback_data['content']
+                total_tokens += feedback_data['usage'].get('completion_tokens', 0)
                 
                 # Refinement loop
                 for iteration in range(max_refinement_iterations):
@@ -456,8 +460,8 @@ class Evaluator:
                         messages=refinement_messages,
                         max_tokens=DEFAULT_CONFIG['max_tokens'],
                     )
-                    response = refinement_data['response']
-                    total_tokens += refinement_data['tokens_used']
+                    response = refinement_data['content']
+                    total_tokens += refinement_data['usage'].get('completion_tokens', 0)
                     
                     predicted_answer = extract_ans_from_response(response)
                     
@@ -467,8 +471,8 @@ class Evaluator:
                         messages=messages,
                         max_tokens=DEFAULT_CONFIG['max_tokens'],
                     )
-                    verification_response = verification_data['response']
-                    total_tokens += verification_data['tokens_used']
+                    verification_response = verification_data['content']
+                    total_tokens += verification_data['usage'].get('completion_tokens', 0)
                     
                     is_correct_verification = verify_answer(verification_response)
                     num_cycles += 1
